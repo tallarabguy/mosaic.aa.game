@@ -1,35 +1,77 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState } from "react";
+import WelcomeScreen from "./components/WelcomeScreen";
+import InputGrids from "./components/InputGrids";
+import ShowSymmetry from "./components/ShowSymmetry";
+import AnimatedToCorners from "./components/AnimatedToCorners"
+import MarginBuilder from "./components/MarginBuilder";
+// Import more screens as you build them...
+
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [stage, setStage] = useState("welcome");
+  const [inputPatterns, setInputPatterns] = useState({ start: null, end: null });
+  const [cornerPatterns, setCornerPatterns] = useState(null);
+  const [currentGrid, setCurrentGrid] = useState(null);
+  const [marginIndex, setMarginIndex] = useState(0);
+  const [showNextButton, setShowNextButton] = useState(false);
 
+  // You can add more props and handlers as you go
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="app-center">
+      {stage === "welcome" && (
+        <WelcomeScreen
+          onStart={() => setStage("input")}
+          onExplore={() => {/* logic here */}}
+        />
+      )}
+      {stage === "input" && (
+        <InputGrids
+          onDone={(patterns) => {
+            setInputPatterns(patterns);
+            setStage("show-symmetry");
+          }}
+        />
+      )}
+      {stage === "show-symmetry" && inputPatterns.start && inputPatterns.end && (
+        <ShowSymmetry
+          inputPatterns={inputPatterns}
+          onContinue={(patterns, positions) => {
+            setCornerPatterns({ ...patterns, positions });
+            setStage("corners-animation");
+          }}
+        />
+      )}
+      {stage === "corners-animation" && cornerPatterns && (
+        <AnimatedToCorners
+          start4={cornerPatterns.start4}
+          end4={cornerPatterns.end4}
+          inv_start4={cornerPatterns.inv_start4}
+          inv_end4={cornerPatterns.inv_end4}
+          start4Pos={cornerPatterns.positions?.start4}
+          end4Pos={cornerPatterns.positions?.end4}
+          inv_start4Pos={cornerPatterns.positions?.inv_start4}
+          inv_end4Pos={cornerPatterns.positions?.inv_end4}
+          onDone={grid => {
+            setCurrentGrid(grid);
+            setMarginIndex(0);
+            setStage("margin-builder");
+          }}
+        />
+      )}
+      {stage === "margin-builder" && currentGrid && (
+        <MarginBuilder
+          grid={currentGrid}
+          step={marginIndex}
+          onGridUpdate={setCurrentGrid}
+          onContinue={() => {
+            if (marginIndex < 3) setMarginIndex(marginIndex + 1);
+            else setStage("solving");
+          }}
+        />
+      )}
+      {/* Add your "solving" and other stages below */}
+    </div>
+  );
 }
 
-export default App
+export default App;
