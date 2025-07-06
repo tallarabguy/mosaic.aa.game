@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import WelcomeScreen from "./components/WelcomeScreen";
 import InputGrids from "./components/InputGrids";
 import ShowSymmetry from "./components/ShowSymmetry";
 import AnimatedToCorners from "./components/AnimatedToCorners"
 import MarginBuilder from "./components/MarginBuilder";
+import PatternGrid from "./components/PatternGrid";
 // Import more screens as you build them...
 
 
@@ -14,6 +15,14 @@ function App() {
   const [currentGrid, setCurrentGrid] = useState(null);
   const [marginIndex, setMarginIndex] = useState(0);
   const [showNextButton, setShowNextButton] = useState(false);
+
+  useEffect(() => {
+    if (window.__triggerNextStep) {
+      if (stage === "margin-builder" && marginIndex < 3) setMarginIndex(marginIndex + 1);
+      else if (stage === "margin-builder") setStage("solving");
+      window.__triggerNextStep = false;
+    }
+  }, [currentGrid, stage, marginIndex]);
 
   // You can add more props and handlers as you go
   return (
@@ -60,16 +69,17 @@ function App() {
       )}
       {stage === "margin-builder" && currentGrid && (
         <MarginBuilder
-          grid={currentGrid}
-          step={marginIndex}
-          onGridUpdate={setCurrentGrid}
-          onContinue={() => {
-            if (marginIndex < 3) setMarginIndex(marginIndex + 1);
-            else setStage("solving");
+          initialGrid={currentGrid}
+          onComplete={finalGrid => {
+            setCurrentGrid(finalGrid);
+            setStage("solving");
           }}
         />
       )}
       {/* Add your "solving" and other stages below */}
+      {stage === "solving" && currentGrid && (
+        <PatternGrid pattern={currentGrid} size={16} />
+      )}
     </div>
   );
 }

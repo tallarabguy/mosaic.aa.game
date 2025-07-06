@@ -19,7 +19,7 @@ function ShowSymmetry({ inputPatterns, onContinue }) {
 
   useEffect(() => {
     if (step < 5) {
-      const timeout = setTimeout(() => setStep(step + 1), 1200);
+      const timeout = setTimeout(() => setStep(step + 1), 500);
       return () => clearTimeout(timeout);
     }
   }, [step]);

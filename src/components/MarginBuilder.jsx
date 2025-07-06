@@ -6,16 +6,12 @@ import { rotateGrid90Left } from "../utils/gridHelpers";
 
 const GRID_SIZE = 32, CELL_SIZE = 16;
 
-// Utility for extracting 4x4 from a 32x32 grid
-// "topRight" => rows 0:4, cols 28:32
-// "bottomRight" => rows 28:32, cols 28:32
 const extract4x4 = (grid, which) => {
   if (which === "topRight") return grid.slice(0, 4).map(r => r.slice(28, 32));
   if (which === "bottomRight") return grid.slice(28, 32).map(r => r.slice(28, 32));
   throw new Error("Unknown corner: " + which);
 };
 
-// Place margin along right edge, skipping 4 cells at top/bottom
 const embedMarginAtRight = (grid, margin) => {
   const newGrid = grid.map(r => [...r]);
   for (let i = 0; i < margin.length; i++)
@@ -32,49 +28,69 @@ function flattenMarginBlocks(blocks) {
   return allRows;
 }
 
-
-export default function MarginBuilder({ grid, step, onGridUpdate, onContinue }) {
+export default function MarginBuilder({ initialGrid, onComplete }) {
+  const [step, setStep] = useState(0); // step 0–4 (0–3 = margin builds, 4 = final rotate/upright)
+  const [grid, setGrid] = useState(initialGrid);
   const [showMargin, setShowMargin] = useState(false);
   const [margin, setMargin] = useState(null);
-  const [animatedGrid, setAnimatedGrid] = useState(grid);
-  const [rotation, setRotation] = useState(0);
+  const [rotation, setRotation] = useState(0); // degrees
 
-    useEffect(() => {
-        // Build and overlay the margin for this step
-        const start = extract4x4(grid, "topRight");
-        const end = extract4x4(grid, "bottomRight");
-        const marginBlocks = build_margin(start, end);
-        const margin = flattenMarginBlocks(marginBlocks);
+  useEffect(() => {
+    // If all four margins + final rotation done, pass to parent
+    if (step >= 5) {
+      onComplete && onComplete(grid);
+      return;
+    }
 
-        setMargin(margin);
-        setShowMargin(true);
+    // Animate building margins for steps 0–3, final rotate on step 4
+    if (step < 4) {
+      // 1. Extract corners on the current grid (axes "reset" each step)
+      const start = extract4x4(grid, "topRight");
+      const end = extract4x4(grid, "bottomRight");
+      const marginBlocks = build_margin(start, end);
+      const marginFlat = flattenMarginBlocks(marginBlocks);
+      setMargin(marginFlat);
+      setShowMargin(true);
 
-        // Show margin overlay for a while, then embed and animate rotation
-        const marginTimeout = setTimeout(() => {
-            const gridWithMargin = embedMarginAtRight(grid, margin);
-            setAnimatedGrid(gridWithMargin);
-            setShowMargin(false);
+      // 2. Overlay the margin visually for a moment
+      const overlayTimeout = setTimeout(() => {
+        // 3. Embed margin at right edge of CURRENT grid
+        const gridWithMargin = embedMarginAtRight(grid, marginFlat);
+        setGrid(gridWithMargin);
+        setShowMargin(false);
 
-                // Animate the rotation
-            setTimeout(() => {
-                setRotation(r => r - 90);
-                // After animation finishes, update the grid data and call parent
-                setTimeout(() => {
-                    const rotated = rotateGrid90Left(gridWithMargin);
-                    setAnimatedGrid(rotated);
-                    setRotation(0);
-                    // Only update parent and advance step ONCE per step
-                    onGridUpdate(rotated);
-                    onContinue();
-                }, 1000); // rotation duration
-            }, 500); // margin pulse duration
-        }, 1200); // show margin before embedding
+        // 4. Visually rotate the DOM (anti-clockwise 90°)
+        setRotation((step + 1) * -90);
 
-        return () => clearTimeout(marginTimeout);
-        // ------ CRITICAL: ONLY depend on `step`! ------
-    }, [step]); // <---- This is the fix!
+        // 5. After rotation, rotate grid data left and move to next step
+        const rotateTimeout = setTimeout(() => {
+          const rotatedGrid = rotateGrid90Left(gridWithMargin);
+          setGrid(rotatedGrid);
+          setStep(s => s + 1);
+        }, 900);
 
-  // Overlay margin on right edge before it gets "embedded"
+        return () => clearTimeout(rotateTimeout);
+      }, 1100);
+
+      return () => clearTimeout(overlayTimeout);
+
+    } else if (step === 4) {
+      // FINAL STEP: rotate grid upright (without margin build)
+      setRotation(-360);
+
+      const finalRotateTimeout = setTimeout(() => {
+        // Bring the grid back upright for next stage
+        let uprightGrid = grid;
+        for (let i = 0; i < 3; i++) uprightGrid = rotateGrid90Left(uprightGrid);
+        setGrid(uprightGrid);
+        setStep(s => s + 1);
+      }, 900);
+
+      return () => clearTimeout(finalRotateTimeout);
+    }
+  }, [step, grid]);
+
+  // Display the grid at its current orientation for this animation step
   return (
     <div style={{
       position: "relative",
@@ -84,7 +100,7 @@ export default function MarginBuilder({ grid, step, onGridUpdate, onContinue }) 
     }}>
       <motion.div
         animate={{ rotate: rotation }}
-        transition={{ duration: 1, ease: "easeInOut" }}
+        transition={{ duration: 0.9, ease: "easeInOut" }}
         style={{
           width: GRID_SIZE * CELL_SIZE,
           height: GRID_SIZE * CELL_SIZE,
@@ -93,7 +109,7 @@ export default function MarginBuilder({ grid, step, onGridUpdate, onContinue }) 
           top: 0
         }}
       >
-        <PatternGrid pattern={animatedGrid} size={CELL_SIZE} />
+        <PatternGrid pattern={grid} size={CELL_SIZE} />
         {showMargin && margin && (
           <div style={{
             position: "absolute",
@@ -103,8 +119,7 @@ export default function MarginBuilder({ grid, step, onGridUpdate, onContinue }) 
             height: margin.length * CELL_SIZE,
             zIndex: 2,
             pointerEvents: "none",
-            boxShadow: "0 0 20px 2px #e90a",
-            transition: "box-shadow 0.5s"
+            boxShadow: "0 0 20px 2px #e90a"
           }}>
             <PatternGrid pattern={margin} size={CELL_SIZE} />
           </div>
