@@ -32,10 +32,11 @@ function flattenMarginBlocks(blocks) {
 export default function MarginBuilder({ initialGrid, onComplete }) {
   const [step, setStep] = useState(0);
   const [grid, setGrid] = useState(initialGrid);
-  const [showMargin, setShowMargin] = useState(false);
+  const [rotatingGrid, setRotatingGrid] = useState(null);
+  const [showRotatingGrid, setShowRotatingGrid] = useState(false);
   const [margin, setMargin] = useState(null);
+  const [showMargin, setShowMargin] = useState(false);
   const [visualRotation, setVisualRotation] = useState(0);
-  const [isHidden, setIsHidden] = useState(false);
 
   useEffect(() => {
     if (step >= 4) {
@@ -65,29 +66,28 @@ export default function MarginBuilder({ initialGrid, onComplete }) {
       return; // Prevent rest of effect from running
     }
 
-    // 2. After pause, embed margin and animate rotation
     const overlayTimeout = setTimeout(() => {
       const gridWithMargin = embedMarginAtRight(grid, marginFlat);
       setGrid(gridWithMargin);
       setShowMargin(false);
+
+      // Prepare for animation
+      setRotatingGrid(gridWithMargin.map((r) => [...r]));
+      setShowRotatingGrid(true);
       setVisualRotation(-90);
     }, 900);
 
     return () => clearTimeout(overlayTimeout);
   }, [step]);
 
-  // Handle animation complete
+  // After animation:
   function handleAnimationComplete() {
     if (visualRotation === -90) {
-      // 1. Hide grid
-      setIsHidden(true);
-      // 2. After a tick, reset rotation, update grid data, show grid again
-      setTimeout(() => {
-        setVisualRotation(0);
-        setGrid((g) => rotateGrid90Left(g));
-        setStep((s) => s + 1);
-        setIsHidden(false);
-      }, 25); // 25ms is enough for the browser to paint at rotation 0
+      // After animation, show *only* the new grid at 0 rotation
+      setShowRotatingGrid(false);
+      setVisualRotation(0);
+      setGrid((g) => rotateGrid90Left(g));
+      setStep((s) => s + 1);
     }
   }
 
@@ -100,41 +100,54 @@ export default function MarginBuilder({ initialGrid, onComplete }) {
         margin: "40px auto",
       }}
     >
-      <motion.div
-        animate={{ rotate: visualRotation }}
-        transition={{
-          duration: visualRotation === 0 ? 0 : 0.9,
-          ease: "easeInOut",
-        }}
-        onAnimationComplete={handleAnimationComplete}
-        style={{
-          width: GRID_SIZE * CELL_SIZE,
-          height: GRID_SIZE * CELL_SIZE,
-          position: "absolute",
-          left: 0,
-          top: 0,
-          opacity: isHidden ? 0 : 1,
-          pointerEvents: isHidden ? "none" : "auto",
-        }}
-      >
-        <PatternGrid pattern={grid} size={CELL_SIZE} />
-        {showMargin && margin && (
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 28 * CELL_SIZE,
-              width: 4 * CELL_SIZE,
-              height: margin.length * CELL_SIZE,
-              zIndex: 2,
-              pointerEvents: "none",
-              boxShadow: "0 0 20px 2px #e90a",
-            }}
-          >
-            <PatternGrid pattern={margin} size={CELL_SIZE} />
-          </div>
-        )}
-      </motion.div>
+      {/* Show rotatingGrid *only during* animation */}
+      {showRotatingGrid ? (
+        <motion.div
+          animate={{ rotate: visualRotation }}
+          transition={{ duration: 0.9, ease: "easeInOut" }}
+          onAnimationComplete={handleAnimationComplete}
+          style={{
+            width: GRID_SIZE * CELL_SIZE,
+            height: GRID_SIZE * CELL_SIZE,
+            position: "absolute",
+            left: 0,
+            top: 0,
+            zIndex: 2,
+          }}
+        >
+          <PatternGrid pattern={rotatingGrid} size={CELL_SIZE} />
+        </motion.div>
+      ) : (
+        // Show the "real" grid when not animating
+        <div
+          style={{
+            width: GRID_SIZE * CELL_SIZE,
+            height: GRID_SIZE * CELL_SIZE,
+            position: "absolute",
+            left: 0,
+            top: 0,
+            zIndex: 1,
+          }}
+        >
+          <PatternGrid pattern={grid} size={CELL_SIZE} />
+          {showMargin && margin && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 28 * CELL_SIZE,
+                width: 4 * CELL_SIZE,
+                height: margin.length * CELL_SIZE,
+                zIndex: 3,
+                pointerEvents: "none",
+                boxShadow: "0 0 20px 2px #e90a",
+              }}
+            >
+              <PatternGrid pattern={margin} size={CELL_SIZE} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
