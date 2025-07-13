@@ -34,7 +34,7 @@ const MOVE_DIRECTION_BITS = {
 
 function encode_component_index(index) {
   // 1–4, returns 4-bit array
-  return [0,0,0,0].map((_,i) => (index-1) & (8>>i) ? 1 : 0);
+  return [0,0,0,0].map((_,i) => (index) & (8>>i) ? 1 : 0);
 }
 function encode_move_direction(moveName) {
   return MOVE_DIRECTION_BITS[moveName] || [0, 0, 0, 0];
@@ -109,19 +109,33 @@ function compute_greedy_transmission(segments, footer) {
   return [best_moves, null];
 }
 
+function rotateBlock180(block) {
+  // Rotates a 2D array by 180°
+  return block.slice().reverse().map(row => row.slice().reverse());
+}
+
 // --- Margin builder main routine ---
 
-function build_margin(start_corner, end_corner) {
+function build_margin(start_corner, end_corner, do_directionality_check = true) {
   // header = (start==1 & end==0)
-  const header = start_corner.map((row, i) =>
+  let header = start_corner.map((row, i) =>
     row.map((cell, j) => (cell === 1 && end_corner[i][j] === 0 ? 1 : 0))
   );
   // footer = (start==0 & end==1)
-  const footer = start_corner.map((row, i) =>
+  let footer = start_corner.map((row, i) =>
     row.map((cell, j) => (cell === 0 && end_corner[i][j] === 1 ? 1 : 0))
   );
 
-  // --- directionality check omitted for now ---
+  // --- Directionality check ---
+  const orig_dir_possible = header.flat().reduce((sum, v) => sum + v, 0) > 0;
+  let swap = false;
+  if (!orig_dir_possible && do_directionality_check) {
+    // Swap header and footer if header is empty
+    const temp = header;
+    header = footer;
+    footer = temp;
+    swap = true;
+  }
 
   // --- segmentation ---
   const segments = apply_segmentation_w_type(header); // implement below
@@ -131,7 +145,7 @@ function build_margin(start_corner, end_corner) {
 
   // --- Assemble margin blocks (2 rows separator, etc.) ---
   const separator = Array.from({ length: 2 }, () => Array(4).fill(1));
-  const blocks = [
+  let blocks = [
     { name: "start", block: start_corner },
     { name: "separator", block: separator },
     { name: "header", block: header },
@@ -142,6 +156,18 @@ function build_margin(start_corner, end_corner) {
     { name: "separator", block: separator },
     { name: "end", block: end_corner }
   ];
+
+  if (swap) {
+    // Only reverse/rotate the "middle" blocks, not start/end
+    const start = blocks[0];
+    const end = blocks[blocks.length - 1];
+    const middle = blocks.slice(1, -1).reverse().map(({ name, block }) => ({
+      name,
+      block: rotateBlock180(block)
+    }));
+    blocks = [start, ...middle, end];
+  }
+
   return blocks;
 }
 
@@ -172,8 +198,9 @@ function compute_greedy_transmission_pattern(segments, footer, end_pattern) {
   if (need_generated_footer) {
     for (let idx = 1; idx <= 4; idx++) {
       const [moveName, movedCoords] = best_moves[idx] || [null, []];
-      if (movedCoords && movedCoords.length) {
-        for (let [x, y] of movedCoords) {
+      const movedArr = movedCoords ? (Array.isArray(movedCoords) ? movedCoords : Array.from(movedCoords)) : [];
+      if (movedArr.length) {
+        for (let [x, y] of movedArr) {
           actual_footer[y][x] = 1;
         }
       }

@@ -4,19 +4,20 @@ import PatternGrid from "./PatternGrid";
 import { build_margin } from "../utils/patternLogic";
 import { rotateGrid90Left } from "../utils/gridHelpers";
 
-const GRID_SIZE = 32, CELL_SIZE = 16;
+const GRID_SIZE = 32,
+  CELL_SIZE = 16;
 
 const extract4x4 = (grid, which) => {
-  if (which === "topRight") return grid.slice(0, 4).map(r => r.slice(28, 32));
-  if (which === "bottomRight") return grid.slice(28, 32).map(r => r.slice(28, 32));
+  if (which === "topRight") return grid.slice(0, 4).map((r) => r.slice(28, 32));
+  if (which === "bottomRight")
+    return grid.slice(28, 32).map((r) => r.slice(28, 32));
   throw new Error("Unknown corner: " + which);
 };
 
 const embedMarginAtRight = (grid, margin) => {
-  const newGrid = grid.map(r => [...r]);
+  const newGrid = grid.map((r) => [...r]);
   for (let i = 0; i < margin.length; i++)
-    for (let j = 0; j < 4; j++)
-      newGrid[i][28 + j] = margin[i][j];
+    for (let j = 0; j < 4; j++) newGrid[i][28 + j] = margin[i][j];
   return newGrid;
 };
 
@@ -29,98 +30,107 @@ function flattenMarginBlocks(blocks) {
 }
 
 export default function MarginBuilder({ initialGrid, onComplete }) {
-  const [step, setStep] = useState(0); // step 0–4 (0–3 = margin builds, 4 = final rotate/upright)
+  const [step, setStep] = useState(0);
   const [grid, setGrid] = useState(initialGrid);
   const [showMargin, setShowMargin] = useState(false);
   const [margin, setMargin] = useState(null);
-  const [rotation, setRotation] = useState(0); // degrees
+  const [visualRotation, setVisualRotation] = useState(0);
+  const [isHidden, setIsHidden] = useState(false);
 
   useEffect(() => {
-    // If all four margins + final rotation done, pass to parent
-    if (step >= 5) {
+    if (step >= 4) {
       onComplete && onComplete(grid);
       return;
     }
 
-    // Animate building margins for steps 0–3, final rotate on step 4
-    if (step < 4) {
-      // 1. Extract corners on the current grid (axes "reset" each step)
+    let marginBlocks, marginFlat;
+    try {
+      // 1. Build and show margin overlay (could throw)
       const start = extract4x4(grid, "topRight");
       const end = extract4x4(grid, "bottomRight");
-      const marginBlocks = build_margin(start, end);
-      const marginFlat = flattenMarginBlocks(marginBlocks);
+      marginBlocks = build_margin(start, end);
+      marginFlat = flattenMarginBlocks(marginBlocks);
+
+      // Defensive: ensure margin is not empty
+      if (!marginFlat || !marginFlat.length) {
+        throw new Error("No valid margin could be generated for this pattern.");
+      }
+
       setMargin(marginFlat);
       setShowMargin(true);
-
-      // 2. Overlay the margin visually for a moment
-      const overlayTimeout = setTimeout(() => {
-        // 3. Embed margin at right edge of CURRENT grid
-        const gridWithMargin = embedMarginAtRight(grid, marginFlat);
-        setGrid(gridWithMargin);
-        setShowMargin(false);
-
-        // 4. Visually rotate the DOM (anti-clockwise 90°)
-        setRotation((step + 1) * -90);
-
-        // 5. After rotation, rotate grid data left and move to next step
-        const rotateTimeout = setTimeout(() => {
-          const rotatedGrid = rotateGrid90Left(gridWithMargin);
-          setGrid(rotatedGrid);
-          setStep(s => s + 1);
-        }, 900);
-
-        return () => clearTimeout(rotateTimeout);
-      }, 1100);
-
-      return () => clearTimeout(overlayTimeout);
-
-    } else if (step === 4) {
-      // FINAL STEP: rotate grid upright (without margin build)
-      setRotation(-360);
-
-      const finalRotateTimeout = setTimeout(() => {
-        // Bring the grid back upright for next stage
-        let uprightGrid = grid;
-        for (let i = 0; i < 3; i++) uprightGrid = rotateGrid90Left(uprightGrid);
-        setGrid(uprightGrid);
-        setStep(s => s + 1);
-      }, 900);
-
-      return () => clearTimeout(finalRotateTimeout);
+    } catch (err) {
+      // Call error handler (prop from parent)
+      onError &&
+        onError(err.message || "Failed to generate margin for this pattern.");
+      return; // Prevent rest of effect from running
     }
-  }, [step, grid]);
 
-  // Display the grid at its current orientation for this animation step
+    // 2. After pause, embed margin and animate rotation
+    const overlayTimeout = setTimeout(() => {
+      const gridWithMargin = embedMarginAtRight(grid, marginFlat);
+      setGrid(gridWithMargin);
+      setShowMargin(false);
+      setVisualRotation(-90);
+    }, 900);
+
+    return () => clearTimeout(overlayTimeout);
+  }, [step]);
+
+  // Handle animation complete
+  function handleAnimationComplete() {
+    if (visualRotation === -90) {
+      // 1. Hide grid
+      setIsHidden(true);
+      // 2. After a tick, reset rotation, update grid data, show grid again
+      setTimeout(() => {
+        setVisualRotation(0);
+        setGrid((g) => rotateGrid90Left(g));
+        setStep((s) => s + 1);
+        setIsHidden(false);
+      }, 25); // 25ms is enough for the browser to paint at rotation 0
+    }
+  }
+
   return (
-    <div style={{
-      position: "relative",
-      width: GRID_SIZE * CELL_SIZE,
-      height: GRID_SIZE * CELL_SIZE,
-      margin: "40px auto"
-    }}>
+    <div
+      style={{
+        position: "relative",
+        width: GRID_SIZE * CELL_SIZE,
+        height: GRID_SIZE * CELL_SIZE,
+        margin: "40px auto",
+      }}
+    >
       <motion.div
-        animate={{ rotate: rotation }}
-        transition={{ duration: 0.9, ease: "easeInOut" }}
+        animate={{ rotate: visualRotation }}
+        transition={{
+          duration: visualRotation === 0 ? 0 : 0.9,
+          ease: "easeInOut",
+        }}
+        onAnimationComplete={handleAnimationComplete}
         style={{
           width: GRID_SIZE * CELL_SIZE,
           height: GRID_SIZE * CELL_SIZE,
           position: "absolute",
           left: 0,
-          top: 0
+          top: 0,
+          opacity: isHidden ? 0 : 1,
+          pointerEvents: isHidden ? "none" : "auto",
         }}
       >
         <PatternGrid pattern={grid} size={CELL_SIZE} />
         {showMargin && margin && (
-          <div style={{
-            position: "absolute",
-            top: 0,
-            left: 28 * CELL_SIZE,
-            width: 4 * CELL_SIZE,
-            height: margin.length * CELL_SIZE,
-            zIndex: 2,
-            pointerEvents: "none",
-            boxShadow: "0 0 20px 2px #e90a"
-          }}>
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 28 * CELL_SIZE,
+              width: 4 * CELL_SIZE,
+              height: margin.length * CELL_SIZE,
+              zIndex: 2,
+              pointerEvents: "none",
+              boxShadow: "0 0 20px 2px #e90a",
+            }}
+          >
             <PatternGrid pattern={margin} size={CELL_SIZE} />
           </div>
         )}
