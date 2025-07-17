@@ -257,7 +257,13 @@ function apply_segmentation_w_type(grid) {
   const diagonal_clear = check_diagonal_clear(grid);
   const segmentation_type = diagonal_clear ? "Diagonal" : "Orthogonal";
   // console.log(`Segmentation type: ${segmentation_type}`);
-  return label_and_get_subcomponents(grid, segmentation_type);
+  let segments = label_and_get_subcomponents(grid, segmentation_type);
+  const hasEmpty = Object.values(segments).some((arr) => arr.length === 0);
+  if (hasEmpty) {
+    segments = label_and_get_subcomponents(grid, "Orthogonal");
+    return segments;
+  }
+  return segments;
 }
 
 // --- EXPORTS ---
