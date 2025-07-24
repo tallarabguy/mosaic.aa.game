@@ -29,3 +29,62 @@ body, html, #root {
 .pattern-grid-cell.filled {
   background: #222;
 }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.app-window {
+  min-height: 100vh;
+  width: 100vw;
+  background: #f6f6f9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.app-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  max-width: 700px;
+  width: 95vw;
+  max-height: 85vh;
+  min-height: 640px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px #0014;
+  padding: 24px 18px 0 18px;
+  position: relative;
+}
+
+
+.pattern-canvas {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* vertical center */
+  align-items: center;     /* horizontal center */
+  overflow-y: auto;
+  min-height: 540px;       /* or whatever you choose */
+  margin-bottom: 18px;
+}
+
+
+
+/* Optional: On mobile, make it fit better */
+@media (max-width: 600px) {
+  .app-content {
+    max-width: 100vw;
+    min-height: 90vh;
+    border-radius: 0;
+    padding: 8px 4px 0 4px;
+  }
+  .pattern-canvas {
+    min-height: 220px;
+  }
+}
+

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import PatternGrid from "./PatternGrid";
 
 const GRID_SIZE = 32;
-const CELL_SIZE = 16;
+const CELL_SIZE = 12;
 
 function drawSquareBorder(grid, offset) {
   const N = grid.length;

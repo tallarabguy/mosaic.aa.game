@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import PatternGrid from "./PatternGrid";
 
 const GRID_SIZE = 32;
-const CELL_SIZE = 16;
+const CELL_SIZE = 12;
 const PATTERN_SIZE = 4;
 const ANIMATION_DURATION = 0.7;
 

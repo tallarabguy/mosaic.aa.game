@@ -3,7 +3,7 @@ import PatternGrid from "./PatternGrid";
 import { getMarginDomains, isFilled } from "../utils/patternUtils";
 
 const GRID_SIZE = 32;
-const CELL_SIZE = 16;
+const CELL_SIZE = 12;
 
 
 function marginCompressionAuto(grid, side) {

@@ -3,7 +3,7 @@ import PatternGrid from "./PatternGrid";
 import { getMarginDomains } from "../utils/patternUtils";
 
 const GRID_SIZE = 32;
-const CELL_SIZE = 16;
+const CELL_SIZE = 12;
 
 // Check if a single "AND-band" for a side is filled (any cell != 0 in the middle band)
 function marginAndBandFilled(grid, side) {

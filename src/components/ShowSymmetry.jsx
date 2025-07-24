@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import PatternGrid from "./PatternGrid";
 import { generateSymmetric4x4 } from "../utils/symmetry";
 
+import './ShowSymmetry.css';
+
 function ShowSymmetry({ inputPatterns, onContinue }) {
   const { start, end } = inputPatterns;
   const [step, setStep] = useState(0);
@@ -39,35 +41,47 @@ function ShowSymmetry({ inputPatterns, onContinue }) {
   };
 
   return (
-    <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
-      {/* Input 1 */}
-      {step >= 0 && <PatternGrid pattern={start} size={40} title="Input 1" />}
-      {step >= 1 && (
-        <div ref={start4Ref}>
-          <PatternGrid pattern={start4} size={20} title="Symmetric 4x4" />
+    <div className="symmetry-grid">
+      <div className="symmetry-row">
+        {/* Top row: Inputs */}
+        <div>
+          {step >= 0 && <PatternGrid pattern={start} size={40} title="Input 1" />}
         </div>
-      )}
-      {step >= 2 && (
-        <div ref={invStart4Ref}>
-          <PatternGrid pattern={inv_start4} size={20} title="Inverse of Input 1" />
+        <div>
+          {step >= 3 && <PatternGrid pattern={end} size={40} title="Input 2" />}
         </div>
-      )}
-      {/* Input 2 */}
-      {step >= 3 && <PatternGrid pattern={end} size={40} title="Input 2" />}
-      {step >= 4 && (
-        <div ref={end4Ref}>
-          <PatternGrid pattern={end4} size={20} title="Symmetric 4x4" />
+      </div>
+      <div className="symmetry-row">
+        {/* Bottom row: Symmetric/Inverse for each input */}
+        <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+          {step >= 1 && (
+            <div ref={start4Ref}>
+              <PatternGrid pattern={start4} size={20} title="Symmetric 4x4" />
+            </div>
+          )}
+          {step >= 2 && (
+            <div ref={invStart4Ref}>
+              <PatternGrid pattern={inv_start4} size={20} title="Inverse" />
+            </div>
+          )}
         </div>
-      )}
+        <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+          {step >= 4 && (
+            <div ref={end4Ref}>
+              <PatternGrid pattern={end4} size={20} title="Symmetric 4x4" />
+            </div>
+          )}
+          {step >= 5 && (
+            <div ref={invEnd4Ref}>
+              <PatternGrid pattern={inv_end4} size={20} title="Inverse" />
+            </div>
+          )}
+        </div>
+      </div>
       {step >= 5 && (
-        <div ref={invEnd4Ref}>
-          <PatternGrid pattern={inv_end4} size={20} title="Inverse of Input 2" />
+        <div style={{ marginTop: 24, textAlign: "center" }}>
+          <button onClick={handleContinue}>Continue</button>
         </div>
-      )}
-      {step >= 5 && (
-        <button style={{ marginLeft: 32 }} onClick={handleContinue}>
-          Continue
-        </button>
       )}
     </div>
   );

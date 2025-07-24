@@ -50,16 +50,19 @@ function zeros(rows=4, cols=4) {
 
 function apply_move(component_coords, move, grid_shape=[4,4]) {
   // move: either [dx, dy] or [[dx, dy], [dx, dy]] for bifurcation
-  if (Array.isArray(move[0])) { // bifurcation
-    let moved = new Set();
+  if (Array.isArray(move[0])) {
+    // bifurcation
+    let moved = [];
     for (let [dx, dy] of move) {
       for (let [x, y] of component_coords) {
-        const nx = x + dx, ny = y + dy;
-        if (nx < 0 || nx >= grid_shape[1] || ny < 0 || ny >= grid_shape[0]) return null;
-        moved.add(`${nx},${ny}`);
+        const nx = x + dx,
+          ny = y + dy;
+        if (nx < 0 || nx >= grid_shape[1] || ny < 0 || ny >= grid_shape[0])
+          return null;
+        moved.push([nx, ny]);
       }
     }
-    return new Set(Array.from(moved).map(s => s.split(',').map(Number)));
+    return moved;
   } else {
     let moved = [];
     for (let [x, y] of component_coords) {
@@ -114,9 +117,100 @@ function rotateBlock180(block) {
   return block.slice().reverse().map(row => row.slice().reverse());
 }
 
+// --- TRANSMISSION VALIDATION ----
+
+function applyMovesToPattern(start_pattern, segments, best_moves) {
+  // Defensive clone to avoid mutating input
+  const result = start_pattern.map((row) => [...row]);
+  for (let seg = 1; seg <= 4; seg++) {
+    const sourceCells = segments[seg];
+    if (!sourceCells || !sourceCells.length) continue;
+    const moveEntry = best_moves[seg];
+    if (!moveEntry) continue;
+    const [moveName, movedCoords] = moveEntry;
+    if (!movedCoords || !movedCoords.length) continue;
+
+    // --- Detect bifurcation ---
+    // (One source cell moved to multiple destinations)
+    if (movedCoords.length > sourceCells.length) {
+      // Usually: only one source cell per segment, multiple destinations
+      for (let fromIdx = 0; fromIdx < sourceCells.length; fromIdx++) {
+        const [fromX, fromY] = sourceCells[fromIdx];
+        // "Move" to all target locations
+        for (let [toX, toY] of movedCoords) {
+          if (start_pattern[fromY][fromX]) {
+            result[fromY][fromX] = 0;
+            result[toY][toX] = 1;
+          }
+        }
+      }
+    } else {
+      // 1-to-1 mapping
+      for (let k = 0; k < sourceCells.length; k++) {
+        const [fromX, fromY] = sourceCells[k];
+        const [toX, toY] = movedCoords[k];
+        if (start_pattern[fromY][fromX]) {
+          result[fromY][fromX] = 0;
+          result[toY][toX] = 1;
+        }
+      }
+    }
+  }
+  return result;
+}
+
+function gridsEqual(a, b) {
+  for (let i = 0; i < 4; i++)
+    for (let j = 0; j < 4; j++) if (a[i][j] !== b[i][j]) return false;
+  return true;
+}
+
+// --- Printing to console ---
+
+function gridToString(grid) {
+  // Turns a 2D grid into lines of "0101"
+  return grid
+    .map((row) => row.map((cell) => (cell ? "■" : "·")).join(" "))
+    .join("\n");
+}
+
+// Side-by-side comparison with diff highlighting
+function compareGridsString(gridA, gridB) {
+  let result = [];
+  for (let y = 0; y < gridA.length; y++) {
+    let rowA = "";
+    let rowB = "";
+    let diff = "";
+    for (let x = 0; x < gridA[0].length; x++) {
+      rowA += gridA[y][x] ? "■" : "·";
+      rowB += gridB[y][x] ? "■" : "·";
+      diff += gridA[y][x] === gridB[y][x] ? " " : "✗";
+    }
+    result.push(`A: ${rowA}   B: ${rowB}   Diff: ${diff}`);
+  }
+  return result.join("\n");
+}
+
+function hasRealMoves(best_moves) {
+  // For indices 1-4 (skip 0 if unused)
+  for (let i = 1; i <= 4; i++) {
+    if (best_moves[i] && best_moves[i][0]) {
+      // If moveName is not null/undefined, or movedCoords not empty
+      return true;
+    }
+  }
+  return false;
+}
+
 // --- Margin builder main routine ---
 
-function build_margin(start_corner, end_corner, do_directionality_check = true) {
+function build_margin(
+  start_corner,
+  end_corner,
+  do_directionality_check = true,
+  debug = false,
+  logToConsole = () => {}
+) {
   // header = (start==1 & end==0)
   let header = start_corner.map((row, i) =>
     row.map((cell, j) => (cell === 1 && end_corner[i][j] === 0 ? 1 : 0))
@@ -129,19 +223,65 @@ function build_margin(start_corner, end_corner, do_directionality_check = true) 
   // --- Directionality check ---
   const orig_dir_possible = header.flat().reduce((sum, v) => sum + v, 0) > 0;
   let swap = false;
+  let end_corner_temp;
+  let start_corner_temp;
+  
   if (!orig_dir_possible && do_directionality_check) {
     // Swap header and footer if header is empty
     const temp = header;
     header = footer;
     footer = temp;
+    end_corner_temp = start_corner;
+    start_corner_temp = end_corner;
     swap = true;
+  } else {
+    end_corner_temp = end_corner;
+    start_corner_temp = start_corner;
+  }
+
+
+  // *** ADDITIONAL ERROR CHECK HERE ***
+  const headerFilled = header.flat().some((v) => v === 1);
+  if (!headerFilled) {
+    logToConsole(
+      "Header segment is empty after directionality check (unsolvable margin)."
+    );
+    //throw new Error("Pattern cannot be solved: header segment is empty after directionality check.");
   }
 
   // --- segmentation ---
   const segments = apply_segmentation_w_type(header); // implement below
 
   // --- transmission pattern ---
-  let [pattern, actual_footer] = compute_greedy_transmission_pattern(segments, footer, end_corner);
+  let [pattern, actual_footer, best_moves] =
+    compute_greedy_transmission_pattern(segments, footer, end_corner_temp);
+
+  // TRANSMISSION MOVES EXISTENCE CHECK
+  if (!hasRealMoves(best_moves)) {
+    logToConsole("No valid transmission moves found for margin.");
+    //throw new Error("No valid transmission moves exist for this margin pattern.");
+  }
+
+  const finalPattern = applyMovesToPattern(
+    start_corner_temp,
+    segments,
+    best_moves
+  );
+
+  logToConsole("Checking moves for margin...");
+
+  if (!gridsEqual(finalPattern, end_corner_temp)) {
+    logToConsole("Transmission Pattern Failed!");
+    logToConsole(compareGridsString(finalPattern, end_corner_temp));
+    //throw new Error("Final Transmission pattern is not a match");
+    logToConsole(`Segments: ${JSON.stringify(segments)}`);
+    logToConsole(`Best Moves: ${JSON.stringify(best_moves)}`);
+  } else {
+    logToConsole("Transmission Pattern Passed!");
+    logToConsole(compareGridsString(finalPattern, end_corner_temp)); // (optional for confirmation)
+    logToConsole(`Segments: ${JSON.stringify(segments)}`);
+    logToConsole(`Best Moves: ${JSON.stringify(best_moves)}`);
+  }
 
   // --- Assemble margin blocks (2 rows separator, etc.) ---
   const separator = Array.from({ length: 2 }, () => Array(4).fill(1));
@@ -168,19 +308,19 @@ function build_margin(start_corner, end_corner, do_directionality_check = true) 
     blocks = [start, ...middle, end];
   }
 
+  if (debug) {
+    return { blocks, best_moves };
+  }
   return blocks;
 }
 
 function compute_greedy_transmission_pattern(segments, footer, end_pattern) {
   const footer_sum = footer.flat().reduce((a, b) => a + b, 0);
-  let scoring_grid, need_generated_footer;
-  if (footer_sum === 0) {
-    scoring_grid = end_pattern;
-    need_generated_footer = true;
-  } else {
-    scoring_grid = footer;
-    need_generated_footer = false;
-  }
+
+  // Choose scoring grid and corresponding actual_footer directly
+  let scoring_grid = footer_sum === 0 ? end_pattern : footer;
+  let actual_footer = scoring_grid; // Direct assignment
+
   const [best_moves, _] = compute_greedy_transmission(segments, scoring_grid);
 
   // Construct the pattern as an 8x4 array:
@@ -192,23 +332,8 @@ function compute_greedy_transmission_pattern(segments, footer, end_pattern) {
     const moveName = best_moves[i] ? best_moves[i][0] : null;
     pattern_rows.push(encode_move_direction(moveName));
   }
-  // pattern shape: 8x4
-  // actual_footer is union of all moved header segments
-  let actual_footer = zeros();
-  if (need_generated_footer) {
-    for (let idx = 1; idx <= 4; idx++) {
-      const [moveName, movedCoords] = best_moves[idx] || [null, []];
-      const movedArr = movedCoords ? (Array.isArray(movedCoords) ? movedCoords : Array.from(movedCoords)) : [];
-      if (movedArr.length) {
-        for (let [x, y] of movedArr) {
-          actual_footer[y][x] = 1;
-        }
-      }
-    }
-  } else {
-    actual_footer = footer;
-  }
-  return [pattern_rows, actual_footer];
+
+  return [pattern_rows, actual_footer, best_moves];
 }
 
 // --- Segmentation Logic (needs real implementation) ---
