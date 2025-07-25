@@ -4,8 +4,7 @@ import PatternGrid from "./PatternGrid";
 import { build_margin } from "../utils/patternLogic";
 import { rotateGrid90Left } from "../utils/gridHelpers";
 
-const GRID_SIZE = 32,
-  CELL_SIZE = 12;
+const GRID_SIZE = 32;
 
 const extract4x4 = (grid, which) => {
   if (which === "topRight") return grid.slice(0, 4).map((r) => r.slice(28, 32));
@@ -46,7 +45,7 @@ function marginName(step) {
 }
 
 
-export default function MarginBuilder({ initialGrid, onComplete, onError, logToConsole }) {
+export default function MarginBuilder({ initialGrid, onComplete, onError, logToConsole, CELL_SIZE }) {
   const [step, setStep] = useState(0);
   const [grid, setGrid] = useState(initialGrid);
   const [rotatingGrid, setRotatingGrid] = useState(null);
@@ -55,14 +54,19 @@ export default function MarginBuilder({ initialGrid, onComplete, onError, logToC
   const [showMargin, setShowMargin] = useState(false);
   const [visualRotation, setVisualRotation] = useState(0);
 
+  let marginBlocks, marginFlat, error_flag;
+
   useEffect(() => {
     if (step >= 4) {
       onComplete && onComplete(grid);
-      logToConsole(`All margins built successfully!`);
+      if (error_flag){
+        logToConsole(`Pattern generation complete.`, "error");
+      } else {
+        logToConsole(`Pattern generation complete.`, "success");
+      }
       return;
     }
 
-    let marginBlocks, marginFlat;
     try {
       // 1. Build and show margin overlay (could throw)
       const start = extract4x4(grid, "topRight");
@@ -70,13 +74,8 @@ export default function MarginBuilder({ initialGrid, onComplete, onError, logToC
 
       logToConsole(`Building ${marginName(step)} margin...`);
 
-      const { blocks: marginBlocks, best_moves } = build_margin(start, end, true, true, logToConsole);
+      [marginBlocks, error_flag] = build_margin(start, end, true, false, logToConsole);
       marginFlat = flattenMarginBlocks(marginBlocks);
-
-      // --- New: Core solvability check ---
-      //if (!hasRealMoves(best_moves)) {
-      //  throw new Error(`Construction failed for the margin.`);
-      //}
 
       setMargin(marginFlat);
       setShowMargin(true);

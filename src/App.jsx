@@ -11,6 +11,8 @@ import InnerCornerFiller from "./components/InnerCornerFiller";
 import CentrePuller from "./components/CentrePuller";
 import TerminalConsole from "./components/TerminalConsole";
 import ExploreNarrator from "./components/Explorer"
+import SolvabilityBitmap from "./components/SolvabilityBitmap"
+import AnimatedSolvabilityBitmap from "./components/AnimatedSolvability";
 
 import './App.css';
 
@@ -18,6 +20,7 @@ import './App.css';
 
 const isMobile = typeof window !== "undefined" && window.innerWidth < 600;
 const CELL_SIZE = isMobile ? 8 : 12; // Or any values you want
+const mini_SIZE = isMobile ? 25 : 40; // Or any values you want
 
 function App() {
   const [stage, setStage] = useState("welcome");
@@ -28,6 +31,7 @@ function App() {
   // const [showNextButton, setShowNextButton] = useState(false);
   const [error, setError] = useState(null); // New error state
   const [consoleMessages, setConsoleMessages] = useState([]);
+  const [exploreUnlocked, setExploreUnlocked] = useState(false);
 
   function logToConsole(text, optsOrType = "info") {
     let type = "info";
@@ -69,8 +73,6 @@ function App() {
   }
 
 
-
-
   useEffect(() => {
     if (window.__triggerNextStep) {
       if (stage === "margin-builder" && marginIndex < 3) setMarginIndex(marginIndex + 1);
@@ -96,6 +98,7 @@ function App() {
                 setInputPatterns(patterns);
                 setStage("show-symmetry");
               }}
+              logToConsole={logToConsole}
             />
           )}
           {stage === "show-symmetry" && inputPatterns.start && inputPatterns.end && (
@@ -105,6 +108,8 @@ function App() {
                 setCornerPatterns({ ...patterns, positions });
                 setStage("corners-animation");
               }}
+              logToConsole={logToConsole}
+              size = {mini_SIZE}
             />
           )}
           {stage === "corners-animation" && cornerPatterns && (
@@ -122,6 +127,8 @@ function App() {
                 setMarginIndex(0);
                 setStage("margin-builder");
               }}
+              logToConsole={logToConsole}
+              CELL_SIZE={CELL_SIZE}
             />
           )}
           
@@ -137,6 +144,7 @@ function App() {
                 setStage("error");          // Move to error overlay/page
               }}
               logToConsole={logToConsole}
+              CELL_SIZE={CELL_SIZE}
             />
           )}
 
@@ -177,6 +185,8 @@ function App() {
                 setCurrentGrid(updatedGrid.map((row) => [...row]));
                 setStage("compression");
               }}
+              logToConsole={logToConsole}
+              CELL_SIZE={CELL_SIZE}
             />
           )}
           {stage === "compression" && currentGrid && (
@@ -186,6 +196,8 @@ function App() {
                 setCurrentGrid(updatedGrid.map((row) => [...row]));
                 setStage("corner-filling"); // or whatever comes next!
               }}
+              logToConsole={logToConsole}
+              CELL_SIZE={CELL_SIZE}             
             />
           )}
           {stage === "corner-filling" && currentGrid && (
@@ -195,6 +207,8 @@ function App() {
                 setCurrentGrid(updatedGrid.map((row) => [...row]));
                 setStage("centre-pulling"); // or whatever comes next!
               }}
+              logToConsole={logToConsole}
+              CELL_SIZE={CELL_SIZE}              
             />
           )}
 
@@ -205,6 +219,8 @@ function App() {
                 setCurrentGrid(updatedGrid.map((row) => [...row]));
                 setStage("final-stage"); // or whatever comes next!
               }}
+              logToConsole={logToConsole}
+              CELL_SIZE={CELL_SIZE}              
             />
           )}
 
@@ -227,7 +243,19 @@ function App() {
           )}
 
           {stage === "explore" && (
-            <ExploreNarrator logToConsole={logToConsole} />
+            <ExploreNarrator
+              logToConsole={logToConsole}
+              onDone={() => {
+                setExploreUnlocked(true); // unlocks the next step
+                setTimeout(() => {
+                  setStage("explore-solved"); // triggers terminal to collapse & grid to show
+                }, 1000); // 1-second delay after password acceptance
+              }}
+            />
+          )}
+
+          {stage === "explore-solved" && (
+            <AnimatedSolvabilityBitmap cellSize={CELL_SIZE} />
           )}
 
         </div>

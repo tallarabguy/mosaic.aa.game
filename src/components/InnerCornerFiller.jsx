@@ -75,10 +75,14 @@ function fillCoreCornersAndDiagonals(grid) {
 }
 
 // --- Main component ---
-export default function InnerCornerFiller({ grid, onComplete }) {
+export default function InnerCornerFiller({ grid, onComplete, logToConsole, CELL_SIZE }) {
   const [filledGrid, setFilledGrid] = useState(() =>
     grid.map((row) => [...row])
   );
+
+  useEffect(() => {
+    logToConsole("Filling in inner-corners.");
+  }, []);
 
   useEffect(() => {
     let working = grid.map((row) => [...row]);

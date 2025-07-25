@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import PatternGrid from "./PatternGrid";
 
 const makeGrid = () => [
@@ -6,9 +6,13 @@ const makeGrid = () => [
   [0, 0],
 ];
 
-function InputGrids({ onDone }) {
+function InputGrids({ onDone, logToConsole }) {
   const [startGrid, setStartGrid] = useState(makeGrid());
   const [endGrid, setEndGrid] = useState(makeGrid());
+
+  useEffect(() => {
+    logToConsole("Enter input patterns.");
+  }, []);
 
   function toggleCell(grid, setGrid, row, col) {
     const newGrid = grid.map((r, i) =>
@@ -16,6 +20,8 @@ function InputGrids({ onDone }) {
     );
     setGrid(newGrid);
   }
+
+  
 
   return (
     <div className="input-grids" style={{ display: "flex", gap: "2rem" }}>

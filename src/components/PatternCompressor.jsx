@@ -3,7 +3,6 @@ import PatternGrid from "./PatternGrid";
 import { getMarginDomains, isFilled } from "../utils/patternUtils";
 
 const GRID_SIZE = 32;
-const CELL_SIZE = 12;
 
 
 function marginCompressionAuto(grid, side) {
@@ -48,10 +47,14 @@ function marginCompressionAuto(grid, side) {
 }
 
 // --- Main component ---
-export default function PatternCompressor({ grid, onComplete }) {
+export default function PatternCompressor({ grid, onComplete, logToConsole, CELL_SIZE }) {
   const [compressed, setCompressed] = useState(() =>
     grid.map((row) => [...row])
   );
+
+  useEffect(() => {
+    logToConsole("Filling intermediary compression patterns.");
+  }, []);
 
   useEffect(() => {
     // Deep copy so we don't mutate the parent grid

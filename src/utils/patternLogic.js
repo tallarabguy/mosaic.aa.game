@@ -225,6 +225,7 @@ function build_margin(
   let swap = false;
   let end_corner_temp;
   let start_corner_temp;
+  let error_flag = false;
   
   if (!orig_dir_possible && do_directionality_check) {
     // Swap header and footer if header is empty
@@ -244,9 +245,12 @@ function build_margin(
   const headerFilled = header.flat().some((v) => v === 1);
   if (!headerFilled) {
     logToConsole(
-      "Header segment is empty after directionality check (unsolvable margin)."
+      "Header segment is empty after directionality check (unsolvable margin).", "error"
     );
-    //throw new Error("Pattern cannot be solved: header segment is empty after directionality check.");
+    error_flag = true;
+    if (debug) {
+      throw new Error("Pattern cannot be solved: header segment is empty after directionality check.");
+    }
   }
 
   // --- segmentation ---
@@ -258,8 +262,11 @@ function build_margin(
 
   // TRANSMISSION MOVES EXISTENCE CHECK
   if (!hasRealMoves(best_moves)) {
-    logToConsole("No valid transmission moves found for margin.");
-    //throw new Error("No valid transmission moves exist for this margin pattern.");
+    logToConsole("No valid transmission moves found for margin.", "error");
+    error_flag = true;
+    if (debug) {
+      throw new Error("No valid transmission moves exist for this margin pattern.");
+    }
   }
 
   const finalPattern = applyMovesToPattern(
@@ -271,16 +278,19 @@ function build_margin(
   logToConsole("Checking moves for margin...");
 
   if (!gridsEqual(finalPattern, end_corner_temp)) {
-    logToConsole("Transmission Pattern Failed!");
-    logToConsole(compareGridsString(finalPattern, end_corner_temp));
-    //throw new Error("Final Transmission pattern is not a match");
-    logToConsole(`Segments: ${JSON.stringify(segments)}`);
-    logToConsole(`Best Moves: ${JSON.stringify(best_moves)}`);
+    logToConsole("Transmission Pattern Failed!", "error");
+    logToConsole(compareGridsString(finalPattern, end_corner_temp), "error");
+    if (debug) {
+      throw new Error("Final Transmission pattern is not a match");
+    }
+    logToConsole(`Segments: ${JSON.stringify(segments)}`, "error");
+    logToConsole(`Best Moves: ${JSON.stringify(best_moves)}`, "error");
+    error_flag = true;
   } else {
-    logToConsole("Transmission Pattern Passed!");
-    logToConsole(compareGridsString(finalPattern, end_corner_temp)); // (optional for confirmation)
-    logToConsole(`Segments: ${JSON.stringify(segments)}`);
-    logToConsole(`Best Moves: ${JSON.stringify(best_moves)}`);
+    logToConsole("Transmission Pattern Passed!", "success");
+    logToConsole(compareGridsString(finalPattern, end_corner_temp), "success"); // (optional for confirmation)
+    logToConsole(`Segments: ${JSON.stringify(segments)}`, "success");
+    logToConsole(`Best Moves: ${JSON.stringify(best_moves)}`, "success");
   }
 
   // --- Assemble margin blocks (2 rows separator, etc.) ---
@@ -308,10 +318,7 @@ function build_margin(
     blocks = [start, ...middle, end];
   }
 
-  if (debug) {
-    return { blocks, best_moves };
-  }
-  return blocks;
+  return [blocks, error_flag];
 }
 
 function compute_greedy_transmission_pattern(segments, footer, end_pattern) {

@@ -4,9 +4,13 @@ import { generateSymmetric4x4 } from "../utils/symmetry";
 
 import './ShowSymmetry.css';
 
-function ShowSymmetry({ inputPatterns, onContinue }) {
+function ShowSymmetry({ inputPatterns, onContinue, logToConsole, size }) {
   const { start, end } = inputPatterns;
   const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    logToConsole("Generating corner patterns through reflection and inversion of input patterns.");
+  }, []);
 
   // Add refs for 4x4 patterns
   const start4Ref = useRef(null);
@@ -40,15 +44,17 @@ function ShowSymmetry({ inputPatterns, onContinue }) {
     );
   };
 
+  //let size = 40;
+
   return (
     <div className="symmetry-grid">
       <div className="symmetry-row">
         {/* Top row: Inputs */}
         <div>
-          {step >= 0 && <PatternGrid pattern={start} size={40} title="Input 1" />}
+          {step >= 0 && <PatternGrid pattern={start} size={size} title="Input 1" />}
         </div>
         <div>
-          {step >= 3 && <PatternGrid pattern={end} size={40} title="Input 2" />}
+          {step >= 3 && <PatternGrid pattern={end} size={size} title="Input 2" />}
         </div>
       </div>
       <div className="symmetry-row">
@@ -56,24 +62,24 @@ function ShowSymmetry({ inputPatterns, onContinue }) {
         <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
           {step >= 1 && (
             <div ref={start4Ref}>
-              <PatternGrid pattern={start4} size={20} title="Symmetric 4x4" />
+              <PatternGrid pattern={start4} size={size/2} title="Symmetric 4x4" />
             </div>
           )}
           {step >= 2 && (
             <div ref={invStart4Ref}>
-              <PatternGrid pattern={inv_start4} size={20} title="Inverse" />
+              <PatternGrid pattern={inv_start4} size={size/2} title="Inverse" />
             </div>
           )}
         </div>
         <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
           {step >= 4 && (
             <div ref={end4Ref}>
-              <PatternGrid pattern={end4} size={20} title="Symmetric 4x4" />
+              <PatternGrid pattern={end4} size={size/2} title="Symmetric 4x4" />
             </div>
           )}
           {step >= 5 && (
             <div ref={invEnd4Ref}>
-              <PatternGrid pattern={inv_end4} size={20} title="Inverse" />
+              <PatternGrid pattern={inv_end4} size={size/2} title="Inverse" />
             </div>
           )}
         </div>

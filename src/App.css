@@ -12,6 +12,12 @@ body, html, #root {
   flex-direction: column;
 }
 
+.welcome-screen h1 {
+  color: #222; /* or your preferred color */
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
 .pattern-grid {
   border: 2px solid #555;
   display: inline-block;

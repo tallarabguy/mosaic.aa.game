@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import PatternGrid from "./PatternGrid";
 
 const GRID_SIZE = 32;
-const CELL_SIZE = 12;
 
 function drawSquareBorder(grid, offset) {
   const N = grid.length;
@@ -29,10 +28,14 @@ function drawOffsetLines(grid, offset) {
   }
 }
 
-export default function PatternFiller({ grid, onComplete }) {
+export default function PatternFiller({ grid, onComplete, logToConsole, CELL_SIZE  }) {
   const [workingGrid, setWorkingGrid] = useState(() =>
     grid.map((row) => [...row])
   );
+
+  useEffect(() => {
+    logToConsole("Filling in gridlines.");
+  }, []);
 
   useEffect(() => {
     let working = grid.map((row) => [...row]);

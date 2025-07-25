@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import PatternGrid from "./PatternGrid";
 
 const GRID_SIZE = 32;
-const CELL_SIZE = 12;
 const PATTERN_SIZE = 4;
 const ANIMATION_DURATION = 0.7;
 
@@ -12,12 +11,6 @@ const blankGrid = Array.from({ length: GRID_SIZE }, () =>
   Array(GRID_SIZE).fill(0)
 );
 
-const cornerPositions = {
-  topLeft:     { x: 0, y: 0 },
-  topRight:    { x: (GRID_SIZE - PATTERN_SIZE) * CELL_SIZE, y: 0 },
-  bottomLeft:  { x: 0, y: (GRID_SIZE - PATTERN_SIZE) * CELL_SIZE },
-  bottomRight: { x: (GRID_SIZE - PATTERN_SIZE) * CELL_SIZE, y: (GRID_SIZE - PATTERN_SIZE) * CELL_SIZE }
-};
 
 function toLocalCoords(coords, containerRect) {
   if (!coords || !containerRect) return null;
@@ -52,11 +45,22 @@ function embedCornersToGrid({ start4, end4, inv_start4, inv_end4 }) {
 export default function AnimatedToCorners({
   start4, end4, inv_start4, inv_end4,
   start4Pos, end4Pos, inv_start4Pos, inv_end4Pos,
-  onDone
+  onDone, logToConsole, CELL_SIZE
 }) {
   const containerRef = useRef(null);
   const [containerRect, setContainerRect] = useState(null);
   const [embedded, setEmbedded] = useState(false);
+
+  const cornerPositions = {
+    topLeft:     { x: 0, y: 0 },
+    topRight:    { x: (GRID_SIZE - PATTERN_SIZE) * CELL_SIZE, y: 0 },
+    bottomLeft:  { x: 0, y: (GRID_SIZE - PATTERN_SIZE) * CELL_SIZE },
+    bottomRight: { x: (GRID_SIZE - PATTERN_SIZE) * CELL_SIZE, y: (GRID_SIZE - PATTERN_SIZE) * CELL_SIZE }
+  };
+
+  useEffect(() => {
+    logToConsole("Placing patterns into respective corners.");
+  }, []);
 
   // After overlays land, fade out overlays and fade in grid
   useEffect(() => {
