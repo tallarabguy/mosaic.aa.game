@@ -53,16 +53,17 @@ export default function MarginBuilder({ initialGrid, onComplete, onError, logToC
   const [margin, setMargin] = useState(null);
   const [showMargin, setShowMargin] = useState(false);
   const [visualRotation, setVisualRotation] = useState(0);
+  const [error_trigger, setErrorTrigger] = useState(false);
 
   let marginBlocks, marginFlat, error_flag;
 
   useEffect(() => {
     if (step >= 4) {
       onComplete && onComplete(grid);
-      if (error_flag){
-        logToConsole(`Pattern generation complete.`, "error");
+      if (error_trigger) {
+        logToConsole(`Pattern generation complete - Final Status: Invalid.`, "error");
       } else {
-        logToConsole(`Pattern generation complete.`, "success");
+        logToConsole(`Pattern generation complete - Final Status: Valid.`, "success");
       }
       return;
     }
@@ -76,6 +77,10 @@ export default function MarginBuilder({ initialGrid, onComplete, onError, logToC
 
       [marginBlocks, error_flag] = build_margin(start, end, true, false, logToConsole);
       marginFlat = flattenMarginBlocks(marginBlocks);
+
+      if (error_flag && !error_trigger) {
+        setErrorTrigger(true);
+      }
 
       setMargin(marginFlat);
       setShowMargin(true);
