@@ -30,7 +30,7 @@ export default function TerminalConsole({ messages, expand = false, setConsoleMe
     if (lastPromptIdx !== undefined && lastPromptIdx !== -1) {
       setInputActive(true);
       setInputLine(""); // clear input on new prompt
-      if (inputRef.current) inputRef.current.focus();
+      // if (inputRef.current) inputRef.current.focus();
     } else {
       setInputActive(false);
       setInputLine("");
