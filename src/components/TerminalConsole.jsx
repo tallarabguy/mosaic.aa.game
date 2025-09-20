@@ -18,10 +18,15 @@ export default function TerminalConsole({ messages, expand = false, setConsoleMe
     .filter(idx => idx !== -1)
     .pop();
 
-  // Always scroll to bottom when messages change
+  // Always scroll to bottom when messages change, but only internally
   useEffect(() => {
-    if (bottomRef.current) {
+    // Only scroll if not inside an iframe
+    const isInIframe = window.self !== window.top;
+    if (bottomRef.current && !isInIframe) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    } else if (bottomRef.current) {
+      // Use 'auto' scroll to avoid triggering parent scroll in iframe
+      bottomRef.current.scrollIntoView({ behavior: "auto" });
     }
   }, [messages]);
 
