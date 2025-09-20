@@ -104,7 +104,7 @@ export default function TerminalConsole({ messages, expand = false, setConsoleMe
                     className="terminal-real-input"
                     autoComplete="off"
                     spellCheck={false}
-                    tabIndex="-1"
+                    tabIndex={0}
                     aria-label="Terminal Input"
                   />
                 )}
