@@ -97,7 +97,6 @@ export default function TerminalConsole({ messages, expand = false, setConsoleMe
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     className="terminal-real-input"
-                    autoFocus
                     autoComplete="off"
                     spellCheck={false}
                     tabIndex={0}
